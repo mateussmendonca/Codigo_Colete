@@ -1,3 +1,4 @@
+// --- Definição dos Pinos ---
 const int PIN_TRIG_ESQ = 12;
 const int PIN_ECHO_ESQ = 13;
 const int PIN_TRIG_CEN = 14;
@@ -29,6 +30,12 @@ unsigned long tempoBipEsq = 0;
 unsigned long tempoBipDir = 0;
 bool estadoBuzzerEsq = false;
 bool estadoBuzzerDir = false;
+
+float ultimaDistGer = 999.0;
+unsigned long tempoInativ = 0;
+const unsigned long TEMPO_MUDO = 15000; 
+const float TOLERANCIA = 10.0;    
+bool modoMudo = false;
 
 // --- Controle dos Botões (Debounce Antirruído Corrigido) ---
 int estadoEstavelUp = HIGH;
@@ -151,11 +158,22 @@ void loop() {
   // --- 3. LOGICA DE PRIORIDADE (MAIS PRÓXIMO) ---
   float menorDistEsq = min(distEsq, distCen);
   float menorDistDir = min(distDir, distCen);
-
+  
+  float menorDistGer = min(menorDistEsq, menorDistDir);
+  if (abs(menorDistGer - ultimaDistGer) <= TOLERANCIA){
+      if (modoAtualMillis - tempoInativ >= TEMPO_MUDO){
+        modoMudo = true;
+      }
+  }
+else {
+    tempoInativ = modoAtualMillis; 
+    ultimaDistGer = menorDistGer;   
+    modoMudo = false; 
+  }
   // --- 4. CONTROLE DAS FREQUÊNCIAS DOS BUZZERS ---
   int intervaloEsq = 0; 
   int intervaloDir = 0;
-
+if(!modoMudo){
   // Determina velocidade do Buzzer Esquerdo
   if (menorDistEsq < (distAtivacao / 2.0)) {
     intervaloEsq = 125; // 4 vezes por segundo
@@ -169,7 +187,7 @@ void loop() {
   } else if (menorDistDir < distAtivacao) {
     intervaloDir = 250; // 2 vezes por segundo
   }
-
+}
   // --- 5. EXECUÇÃO DO BIP DOS BUZZERS (SEM BLOQUEIO) ---
   // Buzzer Esquerdo
   if (intervaloEsq == 0) {
